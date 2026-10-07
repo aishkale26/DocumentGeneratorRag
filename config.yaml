@@ -1,0 +1,67 @@
+# Enterprise Document Generation & Summarization RAG Configuration
+app:
+  name: "DocGenius RAG Studio"
+  version: "1.1.0"
+  description: "Enterprise Document Generation, Multi-Strategy Summarization & Latency-Optimized RAG"
+
+# Provider flag: "gemini" (Cloud API) or "ollama" (Local Offline LLM)
+provider: "gemini"
+
+models:
+  # Cloud Gemini Settings
+  llm_model: "gemini-2.5-flash"          # Recommended fast reasoning model for low latency
+  fallback_llm_model: "gemini-1.5-flash"
+  embedding_model: "text-embedding-004"   # 768-dim dense embedding
+  temperature: 0.2
+  max_output_tokens: 4096
+
+ollama:
+  # Local Ollama Settings
+  base_url: "http://localhost:11434"      # Ollama HTTP API endpoint
+  llm_model: "llama3:8b"                  # Local LLM: llama3:8b, mistral, llama3.2, qwen2.5, phi3, gemma2:9b
+  embedding_model: "nomic-embed-text"     # Local Embedder: nomic-embed-text, mxbai-embed-large, all-minilm
+  timeout_seconds: 60                     # Request timeout for local inference
+  temperature: 0.2
+  num_ctx: 8192                           # Local model context window tokens
+
+database:
+  name: "UMP RDS Cluster"
+  host: "remsldbold-cluster.cluster-cwetdgelvqwq.ap-south-1.rds.amazonaws.com"
+  port: 5432
+  dbname: "umpremsl"
+  user: "uatnemlmandi"
+  password: "${UMP_RDS_PASSWORD}"
+  sslmode: "prefer"
+
+databases:
+  - name: UMP RDS Cluster
+    host: remsldbold-cluster.cluster-cwetdgelvqwq.ap-south-1.rds.amazonaws.com
+    port: 5432
+    dbname: umpremsl
+    user: uatnemlmandi
+    password: ${UMP_RDS_PASSWORD}
+
+rag:
+  chunk_size: 600           # Tokens per chunk (optimal balance between context & retrieval precision)
+  chunk_overlap: 120        # Overlap tokens to prevent boundary context loss
+  top_k: 5                  # Number of relevant chunks retrieved
+  similarity_threshold: 0.35 # Minimum cosine similarity cutoff
+  hybrid_alpha: 0.65        # Weight for Dense (0.65) vs Sparse BM25 (0.35)
+  enable_mmr: true          # Maximal Marginal Relevance to eliminate duplicate chunks
+  mmr_diversity: 0.3        # Diversity factor (0 = pure relevance, 1 = max diversity)
+
+summarization:
+  default_strategy: "map_reduce" # Options: stuff, map_reduce, refine, query_focused
+  map_chunk_size: 1500           # Larger chunks for map stage to minimize LLM roundtrips
+  max_parallel_calls: 5          # Concurrent worker threads for parallel Map stage
+  stuff_max_tokens: 8000         # Upper limit for direct stuff summarization
+
+generation:
+  strict_grounding: true         # Require explicit source citations
+  hallucination_guardrail: true  # Refuse ungrounded claims
+  export_formats: ["markdown", "html", "txt"]
+
+latency_tracking:
+  enabled: true
+  slow_query_threshold_ms: 3000
+  log_breakdowns: true
